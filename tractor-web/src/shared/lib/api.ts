@@ -155,7 +155,7 @@ export async function directGCSUpload(
 ): Promise<string> {
   const filename = (file instanceof File && file.name) ? file.name : 'upload'
   const ct = contentType || (file instanceof File ? file.type : '') || 'application/octet-stream'
-  const { uploadUrl, gcsUrl } = await request<{ uploadUrl: string; gcsUrl: string }>(
+  const { uploadUrl, gcsUrl, contentLengthRange } = await request<{ uploadUrl: string; gcsUrl: string; contentLengthRange?: string }>(
     `/api/gcs/upload-url`,
     { method: 'POST', body: JSON.stringify({ folder, filename, contentType: ct }) }
   )
@@ -163,6 +163,8 @@ export async function directGCSUpload(
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', uploadUrl)
     xhr.setRequestHeader('Content-Type', ct)
+    // Must match exactly what the server baked into the signed URL's signature, or GCS rejects the PUT.
+    if (contentLengthRange) xhr.setRequestHeader('X-Goog-Content-Length-Range', contentLengthRange)
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(Math.round((e.loaded * 100) / e.total))
     }
